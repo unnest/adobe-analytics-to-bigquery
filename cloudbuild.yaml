@@ -1,0 +1,31 @@
+steps:
+# Run all tests
+- id: tests
+  name: registry.gitlab.com/python-devs/ci-images:active
+  entrypoint: '/bin/sh'
+  args: ['tox', '-e', 'py310']
+  waitFor: ['-']
+# Run flake8
+- id: flake8
+  name: registry.gitlab.com/python-devs/ci-images:active
+  args: ['tox', '-e', 'flake8']
+  waitFor: ['tests']
+# Run pylint
+- id: pylint
+  name: registry.gitlab.com/python-devs/ci-images:active
+  args: ['tox', '-e', 'pylint']
+  waitFor: ['tests']
+# Deploy cloud function
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'deploy'
+  waitFor: ['pylint', 'flake8']
+  entrypoint: 'gcloud'
+  args:
+  - 'functions'
+  - 'deploy'
+  - 'gcf-import-adobe-analytics'
+  - '--region=eu-west1'
+  - '--source=/workspace/src/functions/import_adobe_analytics'
+  - '--runtime=python310'
+  - '--entry-point=main'
+
